@@ -157,30 +157,36 @@ class ServiceLocator:
     def __init__(self):
         self._services_definitions = {}
         self._services = {}
-        self._aliases = {}
 
     def set(self, service, name=None):
+        """ Registers new service in service locator, if no name provided
+        ServiceLocator will resolve service's name automatically, using
+        following schema:
+
+            moduleNameOfService + "." + service.__name__
+
+        :param service: service
+        :param name: service's name (not required)
+        :return:
+        """
         if name is None:
             name = get_fqn(service)
 
-        self._services[name] = service
+        elif not isinstance(name, str):
+            name = get_fqn(name)
 
-        if service.__name__ not in self._aliases:
-            self._aliases[service.__name__] = []
+        self._services_definitions[name] = service
 
-        self._aliases[service.__name__] = name
+    def get(self, name):
+        if inspect.isclass(name):
+            name = get_fqn(name)
 
-    def get(self, name: str):
         if name in self._services_definitions:
             if name not in self._services:
-                # Initialize only functions
                 if inspect.isfunction(self._services_definitions[name]):
                     self._services[name] = self._services_definitions[name](self)
                 else:
-                    self._services[name] = self._services_definitions
-
-        elif name in self._aliases and len(self._aliases) == 1:
-            return self.get(self._aliases[0])
+                    self._services[name] = self._services_definitions[name]
 
         else:
             return None

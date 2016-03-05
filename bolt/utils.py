@@ -34,3 +34,6 @@ def get_fqn(obj):
 
 def call_object_method(cobj, cmethod, *args, **kwargs):
     return getattr(cobj, cmethod)(*args, **kwargs)
+
+def get_caller_module():
+    pass

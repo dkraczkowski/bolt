@@ -2,6 +2,7 @@ import unittest
 import inspect
 from bolt.application import MiddlewareComposer, ControllerResolver, ServiceLocator, Bolt
 from bolt.routing import Route
+from bolt.utils import get_fqn
 
 app = Bolt()
 
@@ -25,13 +26,50 @@ class SampleController:
 class TestService:
     pass
 
+def test_service_factory():
+    return TestService()
 
-@app.service()
+
+@app.service(TestService)
 def test_service_factory(service_locator):
     return TestService()
 
 
-class TestApplicationFoundation(unittest.TestCase):
+class ServiceLocatorTest(unittest.TestCase):
+    def test_set(self):
+        sl = ServiceLocator()
+        sl.set(TestService)
+
+        self.assertEqual(sl._services_definitions[get_fqn(TestService)], TestService)
+
+    def test_get(self):
+        sl = ServiceLocator()
+        sl.set(TestService)
+        self.assertEqual(sl.get(get_fqn(TestService)), TestService)
+
+    def test_get_by_alias(self):
+        sl = ServiceLocator()
+        sl.set(TestService)
+        self.assertEqual(sl.get(TestService), TestService)
+
+    def test_get_by_class(self):
+        sl = ServiceLocator()
+        sl.set(TestService)
+        self.assertEqual(sl.get(TestService), TestService)
+
+    def test_with_strategy(self):
+        sl = ServiceLocator()
+        sl.set(test_service_factory, TestService)
+        serviceInstance = sl.get(TestService)
+        self.assertIsInstance(serviceInstance, TestService)
+
+    def test_with_assigned_name(self):
+        sl = ServiceLocator()
+        sl.set(test_service_factory, 'CustomName')
+        serviceInstance = sl.get('CustomName')
+        self.assertIsInstance(serviceInstance, TestService)
+
+class ApplicationFoundationTest(unittest.TestCase):
 
     def test_expose(self):
         app._build_route_map()
