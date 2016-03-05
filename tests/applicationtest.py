@@ -1,5 +1,4 @@
 import unittest
-import inspect
 from bolt.application import MiddlewareComposer, ControllerResolver, ServiceLocator, Bolt
 from bolt.routing import Route
 from bolt.utils import get_fqn
@@ -20,11 +19,19 @@ class SampleController:
 
     @app.post('/{id:numeric}')
     def action_0(self):
-        pass
+        return 69
 
 
 class TestService:
+    def __init__(self):
+        self.meaning_of_life = 42
     pass
+
+
+class DependedService:
+    def __init__(self, dependency: TestService):
+        self.dependency = dependency
+
 
 def test_service_factory():
     return TestService()
@@ -33,6 +40,21 @@ def test_service_factory():
 @app.service(TestService)
 def test_service_factory(service_locator):
     return TestService()
+
+
+@app.service(DependedService)
+def depended_service(service_locator: ServiceLocator):
+    return DependedService(service_locator.get(TestService))
+
+
+@app.route('/dependencies')
+class ControllerWithDependencies:
+    def __init__(self, service: DependedService):
+        self.service = service
+
+    @app.get('/{id:numeric}')
+    def action_0(self, route: Route):
+        return int(route.params['id']) + self.service.dependency.meaning_of_life
 
 
 class ServiceLocatorTest(unittest.TestCase):
@@ -69,6 +91,7 @@ class ServiceLocatorTest(unittest.TestCase):
         serviceInstance = sl.get('CustomName')
         self.assertIsInstance(serviceInstance, TestService)
 
+
 class ApplicationFoundationTest(unittest.TestCase):
 
     def test_expose(self):
@@ -77,8 +100,31 @@ class ApplicationFoundationTest(unittest.TestCase):
         self.assertIsInstance(route, Route)
 
     def test_service(self):
-        service = app.service_locator.get(TestService.__name__)
-        #self.assertIsInstance(service, TestService)
+        service = app.service_locator.get(TestService)
+        self.assertIsInstance(service, TestService)
+
+    def test_service_resolvance(self):
+        test_service = app.service_locator.get(TestService)
+        depended_service = app.service_locator.get(DependedService)
+
+        self.assertIsInstance(depended_service, DependedService)
+        self.assertEqual(depended_service.dependency, test_service)
+
+
+class ControllerResolverTest(unittest.TestCase):
+    def test_resolve(self):
+        route = app._map.find('/sample/11')
+        controller_resolver = ControllerResolver(route, app.service_locator)
+        result = controller_resolver.resolve()
+
+        self.assertEqual(69, result)
+
+    def test_resolve_with_dependencies(self):
+        route = app._map.find('/dependencies/33')
+        controller_resolver = ControllerResolver(route, app.service_locator)
+        result = controller_resolver.resolve()
+
+        self.assertEqual(75, result)
 
 
 class MiddlewareComposerTest(unittest.TestCase):

@@ -154,6 +154,8 @@ class Bolt(ApplicationFoundation):
 
 
 class ServiceLocator:
+    """ ServiceLocator
+    """
     def __init__(self):
         self._services_definitions = {}
         self._services = {}
@@ -178,6 +180,11 @@ class ServiceLocator:
         self._services_definitions[name] = service
 
     def get(self, name):
+        """ Resolves the name to already registered service, if service was already instantiated
+        this will return its instance otherwise it will try to instantiate the service
+        :param name: previously registered service's name
+        :return:
+        """
         if inspect.isclass(name):
             name = get_fqn(name)
 
@@ -194,16 +201,27 @@ class ServiceLocator:
         return self._services[name]
 
     def destroy(self):
+        """ Destroys all instantiated services
+        :return:
+        """
         self._services = {}
 
-    def create(self):
-        return copy.copy(self)
+    def from_self(self):
+        """ Creates new instance of ServiceLocator with already defined services'
+        definitions.
+        :return:
+        """
+        sl = copy.copy(self)
+        sl.destroy()
+
+        return sl
 
 
 class ControllerResolver:
     def __init__(self, route: Route, service_locator: ServiceLocator):
         self.controller_class = find_class(route.callback)
-        self.service_locator = service_locator
+        self.service_locator = service_locator.from_self()
+        self.service_locator.set(route, Route)
         self.controller_method = route.callback
 
     def _resolve_constructor_dependencies(self):
@@ -251,7 +269,7 @@ class ControllerResolver:
             if dependency.startswith('builtins.'):
                 continue
 
-            resolved[param.name] = self.sl.get(dependency)
+            resolved[param.name] = self.service_locator.get(dependency)
 
         return resolved
 
