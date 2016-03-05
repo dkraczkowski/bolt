@@ -45,13 +45,6 @@ coverage.xml
 *,cover
 .hypothesis/
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-
 # Sphinx documentation
 docs/_build/
 
@@ -61,3 +54,4 @@ target/
 #Ipython Notebook
 .ipynb_checkpoints
 .DS_Store
+/.idea
