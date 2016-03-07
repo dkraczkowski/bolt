@@ -6,8 +6,12 @@ License: MIT (see LICENSE for details)
 """
 from .routing import Route, RouteMap
 from .utils import find_class, get_fqn, call_object_method, find_clsname
+from .http import Request, Response, Uri
+
 import inspect
 import copy
+
+from cherrypy import wsgiserver
 
 
 class ApplicationFoundation:
@@ -143,10 +147,20 @@ class Bolt(ApplicationFoundation):
 
     VERSION = '0.1.0'
 
-    def __call__(self, env, start_response):
-        return self._on_request(start_response, env)
+    def __init__(self):
+        super().__init__()
+        self._server = None
 
-    def _on_request(self, start_response, env):
+    def __call__(self, env, start_response):
+        return self._on_request(env, start_response)
+
+    def run(self, address: str, port: int=80, server_name: str=None, config: dict=None):
+        self._server = wsgiserver.CherryPyWSGIServer((address, port), self, server_name)
+        self._server.start()
+        pass
+
+    def _on_request(self, env, start_response):
+        request = Request.from_env(env)
         pass
 
     def _on_error(self, request, response, error: Exception):
@@ -218,13 +232,29 @@ class ServiceLocator:
 
 
 class ControllerResolver:
-    def __init__(self, route: Route, service_locator: ServiceLocator):
-        self.controller_class = find_class(route.callback)
-        self.service_locator = service_locator.from_self()
-        self.service_locator.set(route, Route)
-        self.controller_method = route.callback
+    """ Takes responsibility for resolving controller's dependencies. If controller is a method
+    it will create instance of appropriate class and call the method in the context of the class.
+
+    All class and method dependencies will be resolved using service locator passed to the constructor.
+    """
+    def __init__(self, controller, service_locator: ServiceLocator):
+        """
+        Instantiate ControllerResolver
+
+        :param controller: function or method
+        :param service_locator: ServiceLocator
+        :return:
+        """
+        self.controller_class = find_class(controller)
+        self.service_locator = service_locator
+        self.controller_method = controller
 
     def _resolve_constructor_dependencies(self):
+        """
+        If controller is a method its class constructor dependencies have to be resolved before
+        the instance is created. This method takes care about resolving those dependencies.
+        :return:
+        """
         params = inspect.signature(self.controller_class.__init__).parameters.values()
         return self._resolve_params(params)
 
@@ -233,6 +263,10 @@ class ControllerResolver:
         return self._resolve_params(params)
 
     def resolve(self):
+        """
+        Resolves constructor and returns results returned by controller
+        :return:
+        """
         instance = None
         if self.controller_class is not None:
             constructor_params = self._resolve_constructor_dependencies()

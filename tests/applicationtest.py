@@ -82,14 +82,14 @@ class ServiceLocatorTest(unittest.TestCase):
     def test_with_strategy(self):
         sl = ServiceLocator()
         sl.set(test_service_factory, TestService)
-        serviceInstance = sl.get(TestService)
-        self.assertIsInstance(serviceInstance, TestService)
+        service_instance = sl.get(TestService)
+        self.assertIsInstance(service_instance, TestService)
 
     def test_with_assigned_name(self):
         sl = ServiceLocator()
         sl.set(test_service_factory, 'CustomName')
-        serviceInstance = sl.get('CustomName')
-        self.assertIsInstance(serviceInstance, TestService)
+        service_instance = sl.get('CustomName')
+        self.assertIsInstance(service_instance, TestService)
 
 
 class ApplicationFoundationTest(unittest.TestCase):
@@ -114,14 +114,16 @@ class ApplicationFoundationTest(unittest.TestCase):
 class ControllerResolverTest(unittest.TestCase):
     def test_resolve(self):
         route = app._map.find('/sample/11')
-        controller_resolver = ControllerResolver(route, app.service_locator)
+        controller_resolver = ControllerResolver(route.callback, app.service_locator)
         result = controller_resolver.resolve()
 
         self.assertEqual(69, result)
 
     def test_resolve_with_dependencies(self):
         route = app._map.find('/dependencies/33')
-        controller_resolver = ControllerResolver(route, app.service_locator)
+        sl = app.service_locator.from_self()
+        sl.set(route, Route)
+        controller_resolver = ControllerResolver(route.callback, app.service_locator)
         result = controller_resolver.resolve()
 
         self.assertEqual(75, result)
