@@ -1,4 +1,42 @@
 from urllib.parse import urlparse
+from six.moves.http_cookies import SimpleCookie
+
+
+class HttpBody:
+    def __init__(self, stream, length):
+        self.stream = stream
+        self.length = length
+        self._bytes_remaining = length
+        self._contents = ""
+
+    @property
+    def contents(self):
+        if self._bytes_remaining > 0:
+            self.read()
+        return self._contents
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self.stream)
+
+    next = __next__
+
+    def read(self, size=None):
+        buffer = self._read(self.stream.read, size)
+        self._contents += buffer.decode("utf-8")
+        return buffer
+
+
+    def readline(self, limit=None):
+        return self._read(self.stream.readline)
+
+    def _read(self, reader, size=None):
+        if size is None or size == -1 or size > self._bytes_remaining:
+            size = self._bytes_remaining
+        self._bytes_remaining -= size
+        return reader(size)
 
 
 class HttpMessage:
@@ -46,7 +84,15 @@ class Request(HttpMessage):
 
     @property
     def cookies(self):
-        return self._cookies
+        if self._cookies is None:
+            parser = SimpleCookie(self.headers("Cookie"))
+            cookies = {}
+            for morsel in parser.values():
+                cookies[morsel.key] = morsel.value
+
+            self._cookies = cookies
+
+        return self._cookies.copy()
 
     @property
     def files(self):
@@ -60,11 +106,11 @@ class Request(HttpMessage):
         super().__init__(body, headers)
         self._method = method
         self._uri = uri
+        self._cookies = None
 
     @staticmethod
     def from_env(env):
         headers = {}
-        #uri = Uri(env['PATH_INFO'].encode('latin1').decode('utf-8', 'replace'))
         for key in env:
             if key.startswith('HTTP'):
                 headers[key[5:]] = env[key]
@@ -72,8 +118,13 @@ class Request(HttpMessage):
                 headers[key] = env[key]
 
         uri = Uri.from_env(env)
+        if 'CONTENT_LENGTH' in env and int(env['CONTENT_LENGTH']) > 0:
+            body = HttpBody(env['wsgi.input'], int(env['CONTENT_LENGTH']))
+        else:
+            body = None
 
-
+        request = Request(env['REQUEST_METHOD'], uri, body, headers)
+        return request
 
 
 class Response(HttpMessage):
@@ -198,7 +249,7 @@ class Uri:
         self._password = parts.password
 
     @classmethod
-    def from_env(env):
+    def from_env(cls, env):
         instance = Uri('')
         return instance
 

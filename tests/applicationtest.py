@@ -2,60 +2,7 @@ import unittest
 from bolt.application import MiddlewareComposer, ControllerResolver, ServiceLocator, Bolt
 from bolt.routing import Route
 from bolt.utils import get_fqn
-
-app = Bolt()
-
-
-@app.route('/sample')
-class SampleController:
-
-    @app.get('/get-route')
-    def some_action(self):
-        pass
-
-    @app.post('/other-action')
-    def other_action(self):
-        pass
-
-    @app.post('/{id:numeric}')
-    def action_0(self):
-        return 69
-
-
-class TestService:
-    def __init__(self):
-        self.meaning_of_life = 42
-    pass
-
-
-class DependedService:
-    def __init__(self, dependency: TestService):
-        self.dependency = dependency
-
-
-def test_service_factory():
-    return TestService()
-
-
-@app.service(TestService)
-def test_service_factory(service_locator):
-    return TestService()
-
-
-@app.service(DependedService)
-def depended_service(service_locator: ServiceLocator):
-    return DependedService(service_locator.get(TestService))
-
-
-@app.route('/dependencies')
-class ControllerWithDependencies:
-    def __init__(self, service: DependedService):
-        self.service = service
-
-    @app.get('/{id:numeric}')
-    def action_0(self, route: Route):
-        return int(route.params['id']) + self.service.dependency.meaning_of_life
-
+from tests.fixtures import TestService, DependedService, test_service_factory, app
 
 class ServiceLocatorTest(unittest.TestCase):
     def test_set(self):

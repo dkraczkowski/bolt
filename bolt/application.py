@@ -8,10 +8,10 @@ from .routing import Route, RouteMap
 from .utils import find_class, get_fqn, call_object_method, find_clsname
 from .http import Request, Response, Uri
 
+from cherrypy import wsgiserver
+
 import inspect
 import copy
-
-from cherrypy import wsgiserver
 
 
 class ApplicationFoundation:
