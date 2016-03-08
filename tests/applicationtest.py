@@ -4,6 +4,7 @@ from bolt.routing import Route
 from bolt.utils import get_fqn
 from tests.fixtures import TestService, DependedService, test_service_factory, app
 
+
 class ServiceLocatorTest(unittest.TestCase):
     def test_set(self):
         sl = ServiceLocator()

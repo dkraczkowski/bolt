@@ -28,12 +28,8 @@ def find_clsname(method):
 
 
 def get_fqn(obj):
-
     return inspect.getmodule(obj).__name__ + '.' + obj.__name__
 
 
 def call_object_method(cobj, cmethod, *args, **kwargs):
     return getattr(cobj, cmethod)(*args, **kwargs)
-
-def get_caller_module():
-    pass

@@ -47,14 +47,14 @@ class ApplicationFoundation:
 
         return decorator
 
-    def route(self, rule: str):
+    def route(self, rule):
         def decorator(cls):
             self._base_routes[get_fqn(cls)] = rule
             return cls
 
         return decorator
 
-    def get(self, rule: str):
+    def get(self, rule):
         """ Connects an URI rule to GET request.
         :param rule: uri rule
         """
@@ -65,7 +65,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def post(self, rule: str):
+    def post(self, rule):
         def decorator(func):
             self.expose(rule, func, ['POST'])
 
@@ -73,7 +73,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def put(self, rule: str):
+    def put(self, rule):
         def decorator(func):
             self.expose(rule, func, ['PUT'])
 
@@ -81,7 +81,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def patch(self, rule: str):
+    def patch(self, rule):
         def decorator(func):
             self.expose(rule, func, ['PATCH'])
 
@@ -89,7 +89,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def delete(self, rule: str):
+    def delete(self, rule):
         def decorator(func):
             self.expose(rule, func, ['DELETE'])
 
@@ -97,7 +97,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def options(self, rule: str):
+    def options(self, rule):
         def decorator(func):
             self.expose(rule, func, ['OPTIONS'])
 
@@ -105,7 +105,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def any(self, rule: str):
+    def any(self, rule):
         def decorator(func):
             self.expose(rule, func)
 
@@ -123,7 +123,7 @@ class ApplicationFoundation:
             'method': method
         })
 
-    def service(self, name: str=None):
+    def service(self, name=None):
         def decorator(service):
             self.service_locator.set(service, name)
 
@@ -154,7 +154,7 @@ class Bolt(ApplicationFoundation):
     def __call__(self, env, start_response):
         return self._on_request(env, start_response)
 
-    def run(self, address: str, port: int=80, server_name: str=None, config: dict=None):
+    def run(self, address, port=80, server_name=None, config=None):
         self._server = wsgiserver.CherryPyWSGIServer((address, port), self, server_name)
         self._server.start()
         pass
@@ -163,7 +163,7 @@ class Bolt(ApplicationFoundation):
         request = Request.from_env(env)
         pass
 
-    def _on_error(self, request, response, error: Exception):
+    def _on_error(self, request, response, error):
         pass
 
 
@@ -237,7 +237,7 @@ class ControllerResolver:
 
     All class and method dependencies will be resolved using service locator passed to the constructor.
     """
-    def __init__(self, controller, service_locator: ServiceLocator):
+    def __init__(self, controller, service_locator):
         """
         Instantiate ControllerResolver
 
@@ -314,7 +314,7 @@ class MiddlewareComposer:
         self._middleware = []
         self.error = None
 
-    def add(self, middleware: callable):
+    def add(self, middleware):
         self._middleware.append(middleware)
 
         return self

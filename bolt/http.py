@@ -48,7 +48,7 @@ class HttpMessage:
     def body(self):
         return self._body
 
-    def __init__(self, body, headers: dict=None):
+    def __init__(self, body, headers=None):
         self._headers = headers
         self._body = body
 
@@ -102,7 +102,7 @@ class Request(HttpMessage):
     def method(self):
         return self._method
 
-    def __init__(self, method, uri, body, headers: dict=None):
+    def __init__(self, method, uri, body, headers=None):
         super().__init__(body, headers)
         self._method = method
         self._uri = uri
@@ -194,7 +194,7 @@ class Response(HttpMessage):
     def status(self):
         return self._status
 
-    def __init__(self, body, status=200, headers: dict=None):
+    def __init__(self, body, status=200, headers=None):
         self._body = body
         self._status = status
         pass
@@ -252,7 +252,6 @@ class Uri:
     def from_env(cls, env):
         instance = Uri('')
         return instance
-
 
 
 class HttpException(Exception):

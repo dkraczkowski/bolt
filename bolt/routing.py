@@ -3,7 +3,7 @@ import copy
 
 
 class Route:
-    def __init__(self, pattern: str, callback):
+    def __init__(self, pattern, callback):
         """ Provides simplified and more natural way for building regular
         expression which later on can be matched against uri(s).
 
@@ -33,7 +33,7 @@ class Route:
         self.params = {}
         self._rule = Rule(pattern)
 
-    def match(self, uri: str):
+    def match(self, uri):
         """ Tests whether uri matches against the rule.
         Returns False if uri is not matching patter otherwise True.
         Valid uri must start with a slash and contain no ending slash
@@ -65,10 +65,10 @@ class RouteMap:
     def __init__(self):
         self._routes = {'*': []}
 
-    def __call__(self, uri: str, groups: list=['*']):
+    def __call__(self, uri, groups=['*']):
         return self.find(uri, groups)
 
-    def add(self, route: Route, groups: list=['*']):
+    def add(self, route: Route, groups=['*']):
         for group in groups:
             if group not in self._routes:
                 self._routes[group] = []
@@ -78,7 +78,12 @@ class RouteMap:
 
         return self
 
-    def remove(self, route: Route, groups: list=['*']):
+    def remove(self, route, groups=['*']):
+        """
+        :param route:
+        :param groups:
+        :return: RouteMap
+        """
         for group in groups:
             if group == '*':
                 for group in self._routes:
@@ -90,7 +95,7 @@ class RouteMap:
 
         return self
 
-    def find(self, uri: str, groups: list=['*']):
+    def find(self, uri, groups=['*']):
         for group in groups:
             if group == '*':
                 for group, routes in self._routes.items():
@@ -113,11 +118,11 @@ class Rule:
     """
     Private package class
     """
-    def __init__(self, route: str):
+    def __init__(self, route):
         self._parsed_rule = ParsedRule(route)
         self._params = {}
 
-    def match(self, uri: str):
+    def match(self, uri):
         if not uri.startswith('/'):
             raise ValueError('Uri must start with /')
         if uri.endswith('/') and len(uri) != 1:
@@ -149,12 +154,12 @@ class ParsedRule:
         ':alphanum':    '[a-z0-9]+'
     }
 
-    def __init__(self, rule: str):
+    def __init__(self, rule):
         self.raw_rule = rule
         self._properties = []
         self._pattern = None
 
-    def match(self, uri: str):
+    def match(self, uri):
         if self._pattern is None:
             self._parse()
 
@@ -203,7 +208,7 @@ class ParsedRule:
 
             return self._regex
 
-        def __init__(self, name: str, regex: str, raw: str):
+        def __init__(self, name, regex, raw):
             self.name = name
             self.raw = raw
             self._regex = regex
