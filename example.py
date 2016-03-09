@@ -1,11 +1,11 @@
-from bolt.application import bolt
+from bolt.application import ServiceLocator, bolt
 from bolt.http import Request, Response
 
 
 @bolt.route('/test')
 class Controller:
 
-    @bolt.post('/hello_world')
+    @bolt.get('/hello_world')
     def action_1(self, request: Request):
         return Response('Hello World')
 

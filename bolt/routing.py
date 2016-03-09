@@ -33,7 +33,7 @@ class Route:
         self.params = {}
         self._rule = Rule(pattern)
 
-    def match(self, uri: str):
+    def match(self, uri: str) -> bool:
         """ Tests whether uri matches against the rule.
         Returns False if uri is not matching patter otherwise True.
         Valid uri must start with a slash and contain no ending slash
