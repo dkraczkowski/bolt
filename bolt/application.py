@@ -6,7 +6,7 @@ License: MIT (see LICENSE for details)
 """
 from .routing import Route, RouteMap
 from .utils import find_class, get_fqn, call_object_method, find_clsname
-from .http import Request, Response, Uri
+from .http import Request, Response, Uri, HttpException
 
 from cherrypy import wsgiserver
 
@@ -155,14 +155,19 @@ class Bolt(ApplicationFoundation):
     def run(self, address: str, port: int=80, server_name: str=None, config: dict=None):
         self._server = wsgiserver.CherryPyWSGIServer((address, port), self, server_name)
         self._server.start()
-        pass
 
     def _on_request(self, env, start_response):
         request = Request.from_env(env)
+        route = self._map.find(request.uri.path)
+        if route is None:
+            return self._on_error(request, HttpException('Not Found', Response.HTTP_NOT_FOUND), start_response)
+        resolver = ControllerResolver(route.callback, self.service_locator.from_self())
+        response = resolver.resolve()
         pass
 
-    def _on_error(self, request, response, error: Exception):
-        pass
+    def _on_error(self, request, error: HttpException, start_response):
+        start_response(Response.status_message(error.code), [('Content-Type', 'text/plain')])
+        return [str(error).encode("utf-8")]
 
 
 class ServiceLocator:

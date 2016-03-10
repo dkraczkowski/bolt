@@ -3,12 +3,6 @@ from bolt.http import Request, Response
 from cherrypy import wsgiserver
 from wsgiref import simple_server
 
-class Validator:
-
-    def username(self):
-        pass
-
-
 
 @bolt.route('/test')
 class Controller:

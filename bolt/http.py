@@ -190,6 +190,59 @@ class Response(HttpMessage):
     HTTP_NOT_EXTENDED = 510
     HTTP_NETWORK_AUTHENTICATION_REQUIRED = 511
 
+    STATUS_MESSAGE = {
+        # Informational 1xx
+        '100': 'Continue',
+        '101': 'Switching Protocols',
+
+        # Success 2xx
+        200: 'OK',
+        201: 'Created',
+        202: 'Accepted',
+        203: 'Non-Authoritative Information',
+        204: 'No Content',
+        205: 'Reset Content',
+        206: 'Partial Content',
+        # Redirection 3xx
+        300: 'Multiple Choices',
+        301: 'Moved Permanently',
+        302: 'Found',  # 1.1
+        303: 'See Other',
+        304: 'Not Modified',
+        305: 'Use Proxy',
+        # 306 is deprecated but reserved
+        307: 'Temporary Redirect',
+
+        # Client Error 4xx
+        400: 'Bad Request',
+        401: 'Unauthorized',
+        402: 'Payment Required',
+        403: 'Forbidden',
+        404: 'Not Found',
+        405: 'Method Not Allowed',
+        406: 'Not Acceptable',
+        407: 'Proxy Authentication Required',
+        408: 'Request Timeout',
+        409: 'Conflict',
+        410: 'Gone',
+        411: 'Length Required',
+        412: 'Precondition Failed',
+        413: 'Request Entity Too Large',
+        414: 'Request-URI Too Long',
+        415: 'Unsupported Media Type',
+        416: 'Requested Range Not Satisfiable',
+        417: 'Expectation Failed',
+
+        # Server Error 5xx
+        500: 'Internal Server Error',
+        501: 'Not Implemented',
+        502: 'Bad Gateway',
+        503: 'Service Unavailable',
+        504: 'Gateway Timeout',
+        505: 'HTTP Version Not Supported',
+        509: 'Bandwidth Limit Exceeded'
+    }
+
     @property
     def status(self):
         return self._status
@@ -199,6 +252,12 @@ class Response(HttpMessage):
         self._status = status
         pass
 
+    @classmethod
+    def status_message(cls, code):
+        if code in cls.STATUS_MESSAGE:
+            return str(code) + ' ' + cls.STATUS_MESSAGE[code]
+        else:
+            raise AttributeError('Expected valid status code, got %s' % code)
 
 class Uri:
     """
@@ -267,4 +326,6 @@ class Uri:
 
 
 class HttpException(Exception):
-    pass
+    def __init__(self, msg, code='400'):
+        super().__init__(msg)
+        self.code = code

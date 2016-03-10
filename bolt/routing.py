@@ -95,7 +95,7 @@ class RouteMap:
 
         return self
 
-    def find(self, uri, groups=['*']):
+    def find(self, uri, groups=['*']) -> Route:
         for group in groups:
             if group == '*':
                 for group, routes in self._routes.items():
