@@ -254,7 +254,7 @@ class Uri:
         instance = Uri('')
         instance._scheme = env['wsgi.url_scheme']
         instance._hostname = host[0]
-        try :
+        try:
             instance._port = host[1]
         except IndexError:
             if instance._scheme == Uri.SCHEME_HTTP:

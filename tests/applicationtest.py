@@ -15,17 +15,17 @@ class ServiceLocatorTest(unittest.TestCase):
     def test_get(self):
         sl = ServiceLocator()
         sl.set(TestService)
-        self.assertEqual(sl.get(get_fqn(TestService)), TestService)
+        self.assertEqual(sl.get(get_fqn(TestService)).__class__, TestService)
 
     def test_get_by_alias(self):
         sl = ServiceLocator()
         sl.set(TestService)
-        self.assertEqual(sl.get(TestService), TestService)
+        self.assertEqual(sl.get(TestService).__class__, TestService)
 
     def test_get_by_class(self):
         sl = ServiceLocator()
         sl.set(TestService)
-        self.assertEqual(sl.get(TestService), TestService)
+        self.assertEqual(sl.get(TestService).__class__, TestService)
 
     def test_with_strategy(self):
         sl = ServiceLocator()
@@ -56,7 +56,7 @@ class ApplicationFoundationTest(unittest.TestCase):
         depended_service = app.service_locator.get(DependedService)
 
         self.assertIsInstance(depended_service, DependedService)
-        self.assertEqual(depended_service.dependency, test_service)
+        self.assertEqual(depended_service.dependency.__class__, test_service.__class__)
 
 
 class ControllerResolverTest(unittest.TestCase):

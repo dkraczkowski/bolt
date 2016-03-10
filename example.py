@@ -1,4 +1,4 @@
-from bolt.application import bolt
+from bolt.application import ServiceLocator, bolt
 from bolt.http import Request, Response
 from cherrypy import wsgiserver
 from wsgiref import simple_server
@@ -13,7 +13,7 @@ class Validator:
 @bolt.route('/test')
 class Controller:
 
-    @bolt.post('/hello_world')
+    @bolt.get('/hello_world')
     def action_1(self, request: Request):
 
         return Response('Hello World')
