@@ -8,8 +8,6 @@ from .routing import Route, RouteMap
 from .utils import find_class, get_fqn, call_object_method, find_clsname
 from .http import Request, Response, Uri
 
-from cherrypy import wsgiserver
-
 import inspect
 import copy
 
@@ -123,10 +121,9 @@ class ApplicationFoundation:
             'method': method
         })
 
-    def service(self, name=None):
+    def inject(self, **kwargs):
         def decorator(service):
-            self.service_locator.set(service, name)
-
+            self.service_locator.inject(service, **kwargs)
             return service
 
         return decorator
@@ -153,11 +150,6 @@ class Bolt(ApplicationFoundation):
 
     def __call__(self, env, start_response):
         return self._on_request(env, start_response)
-
-    def run(self, address, port=80, server_name=None, config=None):
-        self._server = wsgiserver.CherryPyWSGIServer((address, port), self, server_name)
-        self._server.start()
-        pass
 
     def _on_request(self, env, start_response):
         request = Request.from_env(env)
@@ -193,6 +185,20 @@ class ServiceLocator:
 
         self._services_definitions[name] = service
 
+    def inject(self, service, **kwargs):
+        service.__dependencies__ = kwargs
+        pass
+
+    def _resolve(self, service, name):
+
+        if '__dependencies__' not in service:
+            return None
+
+        for property in service.__dependencies__:
+            dependency = self.get(service.__dependencies__[property])
+
+            pass
+
     def get(self, name):
         """ Resolves the name to already registered service, if service was already instantiated
         this will return its instance otherwise it will try to instantiate the service
@@ -204,10 +210,12 @@ class ServiceLocator:
 
         if name in self._services_definitions:
             if name not in self._services:
-                if inspect.isfunction(self._services_definitions[name]):
-                    self._services[name] = self._services_definitions[name](self)
-                else:
-                    self._services[name] = self._services_definitions[name]
+                service = self._services_definitions[name]
+                if inspect.isfunction(service):
+                    return service(self)
+                elif inspect.isclass(self._services_definitions[name]):
+                    kwargs = self._resolve(service, name)
+                    self._services[name] = service
 
         else:
             return None

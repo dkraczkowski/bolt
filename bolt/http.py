@@ -250,7 +250,19 @@ class Uri:
 
     @classmethod
     def from_env(cls, env):
+        host = env['HTTP_HOST'].split(':')
         instance = Uri('')
+        instance._scheme = env['wsgi.url_scheme']
+        instance._hostname = host[0]
+        try :
+            instance._port = host[1]
+        except IndexError:
+            if instance._scheme == Uri.SCHEME_HTTP:
+                instance._port = 80
+            else:
+                instance._port = 443
+        instance._path = env['PATH_INFO']
+        instance._query = env['QUERY_STRING']
         return instance
 
 
