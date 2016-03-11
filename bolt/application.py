@@ -177,6 +177,7 @@ class Bolt(ApplicationFoundation):
                 )
             return self._on_error(request, HttpException('Not Found', Response.HTTP_NOT_FOUND), start_response)
         service_locator = self.service_locator.from_self()
+        service_locator.set(route, Route)
         service_locator.set(request, Request)
         resolver = ControllerResolver(route.callback, service_locator)
 

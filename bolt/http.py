@@ -1,5 +1,6 @@
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote_plus
 from six.moves.http_cookies import SimpleCookie
+import re
 
 
 class HttpBody:
@@ -338,7 +339,7 @@ class Uri:
         self._fragment = parts.fragment
         self._username = parts.username
         self._password = parts.password
-        self._arguments = parse_qs(self._query)
+        self._arguments = unpack_arguments(self._query)
 
     @classmethod
     def from_env(cls, env):
@@ -355,6 +356,7 @@ class Uri:
                 instance._port = 443
         instance._path = env['PATH_INFO']
         instance._query = env['QUERY_STRING']
+        instance._arguments = unpack_arguments(instance._query)
         return instance
 
 
@@ -362,3 +364,59 @@ class HttpException(Exception):
     def __init__(self, msg, code='400'):
         super().__init__(msg)
         self.code = code
+
+
+def parse_key_pair(keyval):
+    keyval_splitted = keyval.split('=', 1)
+    if len(keyval_splitted) == 1:
+        key, val = keyval_splitted[0], ''
+    else:
+        key, val = keyval_splitted
+    if key == '':
+        return {}
+
+    groups = re.findall(r"\[.*?\]", key)
+    groups_joined = ''.join(groups)
+    if key[-len(groups_joined):] == groups_joined:
+        key = key[:-len(groups_joined)]
+        for group in reversed(groups):
+            if group == '[]':
+                val = [val]
+            else:
+                val = {group[1:-1]: val}
+    return {key: val}
+
+
+def merge_two_structs(s1, s2):
+    if isinstance(s1, list) and \
+       isinstance(s2, list):
+        return s1 + s2
+
+    if isinstance(s1, dict) and \
+       isinstance(s2, dict):
+
+        retval = s1.copy()
+
+        for key, val in s2.items():
+            if retval.get(key) is None:
+                retval[key] = val
+            else:
+                retval[key] = merge_two_structs(retval[key], val)
+        return retval
+    return s2
+
+
+def merge_structs(structs):
+    if len(structs) == 0:
+        return None
+    if len(structs) == 1:
+        return structs[0]
+    first, rest = structs[0], structs[1:]
+    return merge_two_structs(first, merge_structs(rest))
+
+
+def unpack_arguments(arguments):
+    arguments = unquote_plus(arguments)
+    pair_strings = arguments.split('&')
+    key_pairs = [parse_key_pair(x) for x in pair_strings]
+    return merge_structs(key_pairs)

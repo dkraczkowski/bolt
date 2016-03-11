@@ -1,6 +1,5 @@
 import inspect
 
-
 def find_class(method):
     if inspect.ismethod(method):
         for cls in inspect.getmro(method.__self__.__class__):
