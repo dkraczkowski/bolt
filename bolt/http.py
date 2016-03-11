@@ -321,7 +321,7 @@ class Uri:
     def get_argument(self, name):
         try:
             return self._arguments[name]
-        except AttributeError:
+        except KeyError:
             return None
 
     @property
