@@ -3,11 +3,16 @@ from six.moves.http_cookies import SimpleCookie
 
 
 class HttpBody:
-    def __init__(self, stream, length):
-        self.stream = stream
-        self.length = length
-        self._bytes_remaining = length
-        self._contents = ""
+    def __init__(self, body, length):
+        if hasattr(body, 'read'):
+            self.stream = body
+            self.length = length
+            self._bytes_remaining = length
+            self._contents = ""
+        elif isinstance(body, str):
+            self._contents = body
+            self._bytes_remaining = 0
+            self.length = len(body)
 
     @property
     def contents(self):
@@ -52,7 +57,7 @@ class HttpMessage:
         self._headers = headers
         self._body = body
 
-    def headers(self, name: str):
+    def get_header(self, name: str):
         """
         Case insensitive
         :param name:
@@ -63,6 +68,13 @@ class HttpMessage:
             return self._headers[name]
 
         return None
+
+    @property
+    def headers(self):
+        headers = []
+        for key in self._headers:
+            headers.append((key, self._headers[key]))
+        return headers
 
 
 class Request(HttpMessage):
@@ -118,8 +130,14 @@ class Request(HttpMessage):
                 headers[key] = env[key]
 
         uri = Uri.from_env(env)
-        if 'CONTENT_LENGTH' in env and int(env['CONTENT_LENGTH']) > 0:
-            body = HttpBody(env['wsgi.input'], int(env['CONTENT_LENGTH']))
+        if 'CONTENT_LENGTH' in env:
+            try:
+                if int(env['CONTENT_LENGTH']) > 0:
+                    body = HttpBody(env['wsgi.input'], int(env['CONTENT_LENGTH']))
+                else:
+                    body = HttpBody(env['wsgi.input'], 0)
+            except ValueError:
+                body = HttpBody(env['wsgi.input'], 0)
         else:
             body = None
 
@@ -248,9 +266,13 @@ class Response(HttpMessage):
         return self._status
 
     def __init__(self, body, status=200, headers=None):
+        super().__init__(body, headers)
         self._body = body
         self._status = status
-        pass
+        if headers is None:
+            self._headers = {
+                'Content-Type': 'plain/text'
+            }
 
     @classmethod
     def status_message(cls, code):

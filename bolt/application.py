@@ -136,7 +136,8 @@ class ApplicationFoundation:
             clsname = find_clsname(func)
 
             if clsname and clsname in self._base_routes:
-                rule = self._base_routes[clsname] + rule
+                if self._base_routes[clsname] is not '/':
+                    rule = self._base_routes[clsname] + rule
 
             self._map.add(Route(rule, func), route['method'])
 
@@ -153,17 +154,47 @@ class Bolt(ApplicationFoundation):
         return self._on_request(env, start_response)
 
     def run(self, address: str, port: int=80, server_name: str=None, config: dict=None):
+        self._build_route_map()
         self._server = wsgiserver.CherryPyWSGIServer((address, port), self, server_name)
         self._server.start()
 
+    def ready(self):
+        self._build_route_map()
+        return self
+
     def _on_request(self, env, start_response):
         request = Request.from_env(env)
-        route = self._map.find(request.uri.path)
+        route = self._map.find(request.uri.path, [request.method])
         if route is None:
+            if self._map.find(request.uri.path):
+                return self._on_error(
+                    request,
+                    HttpException(
+                        'Method not allowed',
+                        Response.HTTP_METHOD_NOT_ALLOWED
+                    ),
+                    start_response
+                )
             return self._on_error(request, HttpException('Not Found', Response.HTTP_NOT_FOUND), start_response)
         resolver = ControllerResolver(route.callback, self.service_locator.from_self())
-        response = resolver.resolve()
-        pass
+
+        try:
+            self._before_middleware(request)
+            response = resolver.resolve()
+
+            if not isinstance(response, Response):
+                if response is str:
+                    response = Response(response, 200)
+                else:
+                    raise HttpException(
+                        'Controller returned unexpected value, expecting instance of %s or str' %
+                        get_fqn(Response), Response.HTTP_SERVICE_UNAVAILABLE
+                    )
+            self._after_middleware(request, response)
+            start_response(Response.status_message(response.status), response.headers)
+            return [response.body.encode("utf-8")]
+        except HttpException as e:
+            self._on_error(request, e, start_response)
 
     def _on_error(self, request, error: HttpException, start_response):
         start_response(Response.status_message(error.code), [('Content-Type', 'text/plain')])
