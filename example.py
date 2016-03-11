@@ -15,8 +15,8 @@ class Controller:
 
     @bolt.get('/hello')
     def action_1(self, request: Request):
-
-        return Response('Hello World')
+        test = request.uri.get_argument('test')
+        return Response('Hello World ' + test)
 
 
 server = wsgiserver.CherryPyWSGIServer(('0.0.0.0', 8800), bolt.ready(), numthreads=32, request_queue_size=100)

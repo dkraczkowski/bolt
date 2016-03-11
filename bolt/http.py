@@ -1,4 +1,4 @@
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from six.moves.http_cookies import SimpleCookie
 
 
@@ -318,6 +318,16 @@ class Uri:
     def path(self):
         return self._path
 
+    def get_argument(self, name):
+        try:
+            return self._arguments[name]
+        except AttributeError:
+            return None
+
+    @property
+    def arguments(self):
+        return self._arguments
+
     def __init__(self, uri: str):
         parts = urlparse(uri)
         self._scheme = parts.scheme
@@ -328,6 +338,7 @@ class Uri:
         self._fragment = parts.fragment
         self._username = parts.username
         self._password = parts.password
+        self._arguments = parse_qs(self._query)
 
     @classmethod
     def from_env(cls, env):

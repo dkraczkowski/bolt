@@ -176,7 +176,9 @@ class Bolt(ApplicationFoundation):
                     start_response
                 )
             return self._on_error(request, HttpException('Not Found', Response.HTTP_NOT_FOUND), start_response)
-        resolver = ControllerResolver(route.callback, self.service_locator.from_self())
+        service_locator = self.service_locator.from_self()
+        service_locator.set(request, Request)
+        resolver = ControllerResolver(route.callback, service_locator)
 
         try:
             self._before_middleware(request)
@@ -271,7 +273,7 @@ class ServiceLocator:
         """
         self._services = {}
 
-    def from_self(self):
+    def from_self(self) -> 'ServiceLocator':
         """ Creates and returns new copy of ServiceLocator from current instance.
         Note that all instantiated services will not be available in the ServiceLocator's
         copy.
