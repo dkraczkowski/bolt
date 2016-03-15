@@ -1,7 +1,9 @@
 import re
+import json
 from datetime import datetime, date
 from dateutil import parser as date_parser
-
+from bolt.http import Request, Response, HttpException
+from bolt.routing import Route
 
 class ValidatorMeta(type):
 
@@ -327,3 +329,24 @@ class GroupValidator(ValidationRule):
                 return False
 
         return True
+
+
+class ValidationService:
+
+    VALIDATOR = 'validator'
+
+    def __call__(self, app):
+
+        @app.before()
+        def validate_request(service_locator):
+            route = service_locator.get(Route)
+            request = service_locator.get(Request)
+            validator = route.get(ValidationService.VALIDATOR)
+            if validator is None:
+                return True
+
+            data = request.body.from_json()
+            validator = validator(data)
+
+            if not validator.is_valid():
+                raise HttpException('Could not validate request', Response.HTTP_UNPROCESSABLE_ENTITY)

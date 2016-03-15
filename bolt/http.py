@@ -1,6 +1,7 @@
 from urllib.parse import urlparse, parse_qs, unquote_plus
 from six.moves.http_cookies import SimpleCookie
 import re
+import json
 
 
 class HttpBody:
@@ -26,6 +27,13 @@ class HttpBody:
 
     def __next__(self):
         return next(self.stream)
+
+    def from_json(self):
+        try:
+            str = self.contents
+            return json.loads(str)
+        except Exception:
+            return {}
 
     next = __next__
 
@@ -251,6 +259,7 @@ class Response(HttpMessage):
         415: 'Unsupported Media Type',
         416: 'Requested Range Not Satisfiable',
         417: 'Expectation Failed',
+        422: 'Unprocessable Entity',
 
         # Server Error 5xx
         500: 'Internal Server Error',

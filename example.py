@@ -1,26 +1,30 @@
 from bolt.application import bolt
 from bolt.http import Request, Response
+from bolt.validation import *
 from cherrypy import wsgiserver
 
-@bolt.before()
-def do_something_with_request(request: Request):
-    pass
 
-@bolt.after()
-def after_middleware(request: Request, response: Response):
-    response._body += 'a'
+class UserDetails(Validator):
+    username = EmailValidator(required=True)
+    password = StringValidator(required=True, min=4)
 
 @bolt.route('/')
 class Controller:
 
-    @bolt.get('/hello')
+    @bolt.get('/')
     def action_1(self, request: Request):
-        test = request.uri.get_argument('test')
-        return Response('Hello World ' + test)
+        return Response('Default Response')
 
+    @bolt.post('/hello', validator=UserDetails)
+    def hello_username(self):
+        return Response('Hello World')
 
-server = wsgiserver.CherryPyWSGIServer(('0.0.0.0', 8800), bolt.ready(), numthreads=32, request_queue_size=100)
+bolt.use(ValidationService())
+
+server = wsgiserver.CherryPyWSGIServer(
+    ('0.0.0.0', 8800),
+    bolt.ready(),
+    numthreads=32,
+    request_queue_size=100
+)
 server.start()
-'''
-httpd = simple_server.make_server('127.0.0.1', 8800, bolt.ready())
-httpd.serve_forever()'''

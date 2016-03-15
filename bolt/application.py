@@ -8,8 +8,6 @@ from .routing import Route, RouteMap
 from .utils import find_class, get_fqn, call_object_method, find_clsname
 from .http import Request, Response, Uri, HttpException
 
-from cherrypy import wsgiserver
-
 import inspect
 import copy
 
@@ -23,7 +21,7 @@ class ApplicationFoundation:
         self.service_locator = ServiceLocator()
         self._base_routes = {}
         self._routes = []
-        self._services = {}
+        self._services = []
         pass
 
     def before(self):
@@ -60,7 +58,7 @@ class ApplicationFoundation:
         :param rule: uri rule
         """
         def decorator(func):
-            self.expose(rule, func, ['GET'])
+            self.expose(rule, func, ['GET'], kwargs)
 
             return func
 
@@ -68,15 +66,14 @@ class ApplicationFoundation:
 
     def post(self, rule: str, **kwargs):
         def decorator(func):
-            self.expose(rule, func, ['POST'])
-
+            self.expose(rule, func, ['POST'], kwargs)
             return func
 
         return decorator
 
     def put(self, rule: str, **kwargs):
         def decorator(func):
-            self.expose(rule, func, ['PUT'])
+            self.expose(rule, func, ['PUT'], kwargs)
 
             return func
 
@@ -84,7 +81,7 @@ class ApplicationFoundation:
 
     def patch(self, rule: str, **kwargs):
         def decorator(func):
-            self.expose(rule, func, ['PATCH'])
+            self.expose(rule, func, ['PATCH'], kwargs)
 
             return func
 
@@ -92,7 +89,7 @@ class ApplicationFoundation:
 
     def delete(self, rule: str, **kwargs):
         def decorator(func):
-            self.expose(rule, func, ['DELETE'])
+            self.expose(rule, func, ['DELETE'], kwargs)
 
             return func
 
@@ -100,7 +97,7 @@ class ApplicationFoundation:
 
     def options(self, rule: str, **kwargs):
         def decorator(func):
-            self.expose(rule, func, ['OPTIONS'])
+            self.expose(rule, func, ['OPTIONS'], kwargs)
 
             return func
 
@@ -108,22 +105,22 @@ class ApplicationFoundation:
 
     def any(self, rule: str, **kwargs):
         def decorator(func):
-            self.expose(rule, func)
+            self.expose(rule, func, None, kwargs)
 
             return func
 
         return decorator
 
-    def expose(self, rule, func, method=None):
+    def expose(self, rule, func, method=None, settings=None):
         if method is None:
             method = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 
         self._routes.append({
             'rule': rule,
             'func': func,
-            'method': method
+            'method': method,
+            'settings': settings
         })
-
 
     def service(self, name: str=None):
         def decorator(service):
@@ -141,7 +138,7 @@ class ApplicationFoundation:
                 if self._base_routes[clsname] is not '/':
                     rule = self._base_routes[clsname] + rule
 
-            self._map.add(Route(rule, func), route['method'])
+            self._map.add(Route(rule, func, route['settings']), route['method'])
 
 
 class Bolt(ApplicationFoundation):
@@ -155,14 +152,15 @@ class Bolt(ApplicationFoundation):
     def __call__(self, env, start_response):
         return self._on_request(env, start_response)
 
-    def run(self, address: str, port: int=80, server_name: str=None, config: dict=None):
-        self._build_route_map()
-        self._server = wsgiserver.CherryPyWSGIServer((address, port), self, server_name)
-        self._server.start()
-
     def ready(self):
         self._build_route_map()
+        for service in self._services:
+            if hasattr(service, '__call__'):
+                service(self)
         return self
+
+    def use(self, service):
+        self._services.append(service)
 
     def _on_request(self, env, start_response):
         request = Request.from_env(env)
@@ -178,13 +176,14 @@ class Bolt(ApplicationFoundation):
                     start_response
                 )
             return self._on_error(request, HttpException('Not Found', Response.HTTP_NOT_FOUND), start_response)
+        request.route = route
         service_locator = self.service_locator.from_self()
         service_locator.set(route, Route)
         service_locator.set(request, Request)
         resolver = ControllerResolver(route.callback, service_locator)
 
         try:
-            self._before_middleware(request)
+            self._before_middleware(service_locator)
             response = resolver.resolve()
 
             if not isinstance(response, Response):
@@ -195,15 +194,18 @@ class Bolt(ApplicationFoundation):
                         'Controller returned unexpected value, expecting instance of %s or str' %
                         get_fqn(Response), Response.HTTP_SERVICE_UNAVAILABLE
                     )
-            self._after_middleware(request, response)
+            service_locator.set(response, Response)
+            self._after_middleware(service_locator)
             start_response(Response.status_message(response.status), response.headers)
             return [response.body.encode("utf-8")]
         except HttpException as e:
-            self._on_error(request, e, start_response)
+            return self._on_error(request, e, start_response)
 
     def _on_error(self, request, error: HttpException, start_response):
-        start_response(Response.status_message(error.code), [('Content-Type', 'text/plain')])
-        return [str(error).encode("utf-8")]
+        status_message = Response.status_message(error.code)
+        response_contents = str(error).encode("utf-8")
+        start_response(status_message, [('Content-Type', 'text/plain')])
+        return [response_contents]
 
 
 class ServiceLocator:
@@ -399,28 +401,24 @@ class MiddlewareComposer:
 
     def __call__(self, *args, **kwargs):
         for callback in self._middleware:
-            try:
-                func_parameters = inspect.signature(callback).parameters
-                kw_func_args = {}
-                func_args = []
-                if bool(kwargs):
-                    for name in func_parameters:
-                        param = func_parameters[name]
-                        if name in kwargs:
-                            kw_func_args[name] = kwargs[name]
-                        elif param.default:
-                            kw_func_args[name] = param.default
-                        else:
-                            raise ValueError('Callable %s expects parameter %s to be passed, none given' % (
-                                             callback.__name__, name))
-                args_to_pass = len(func_parameters) - len(kw_func_args)
-                if args_to_pass > 0:
-                    func_args = args[:args_to_pass]
+            func_parameters = inspect.signature(callback).parameters
+            kw_func_args = {}
+            func_args = []
+            if bool(kwargs):
+                for name in func_parameters:
+                    param = func_parameters[name]
+                    if name in kwargs:
+                        kw_func_args[name] = kwargs[name]
+                    elif param.default:
+                        kw_func_args[name] = param.default
+                    else:
+                        raise ValueError('Callable %s expects parameter %s to be passed, none given' % (
+                                         callback.__name__, name))
+            args_to_pass = len(func_parameters) - len(kw_func_args)
+            if args_to_pass > 0:
+                func_args = args[:args_to_pass]
 
-                callback(*func_args, **kw_func_args)
-            except Exception as e:
-                self.error = e
-                return False
+            callback(*func_args, **kw_func_args)
 
         return True
 

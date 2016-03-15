@@ -3,7 +3,7 @@ import copy
 
 
 class Route:
-    def __init__(self, pattern, callback):
+    def __init__(self, pattern, callback, settings=None):
         """ Provides simplified and more natural way for building regular
         expression which later on can be matched against uri(s).
 
@@ -32,6 +32,7 @@ class Route:
         self.callback = callback
         self.params = {}
         self._rule = Rule(pattern)
+        self.settings = settings
 
     def match(self, uri: str) -> bool:
         """ Tests whether uri matches against the rule.
@@ -54,8 +55,17 @@ class Route:
 
         return True
 
+    def get(self, property):
+        if self.settings is not None and property in self.settings:
+            return self.settings[property]
+
+        if property in self.params:
+            return self.params[property]
+
+        return None
+
     def clone(self):
-        cloned = Route(self.name, self.callback)
+        cloned = Route(self.name, self.callback, self.settings)
         cloned._rule = self._rule
         cloned.params = copy.copy(self.params)
         return cloned
