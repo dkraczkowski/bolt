@@ -4,15 +4,31 @@ from bolt.validation import *
 from datetime import datetime
 
 
-class ValidatorsTest(unittest.TestCase):
+class ValidatorObjectTest(unittest.TestCase):
 
     def test_create_validator(self):
-        validator = ExampleValidator({
-            'username': 'test@gmail.com',
-            'password': 's3cr3t'
+
+        class UserDetailsValidator(Validator):
+            username = EmailValidator()
+            password = StringValidator(min=5)
+
+        valid_user = UserDetailsValidator({
+            'username': 'test@example.com',
+            'password': 'secretpwd'
         })
-        self.assertEqual('test@gmail.com', validator.username)
-        self.assertEqual('s3cr3t', validator.password)
+        self.assertTrue(valid_user.is_valid())
+
+        valid_user = UserDetailsValidator({})
+        self.assertTrue(valid_user.is_valid())
+
+        invalid_user = UserDetailsValidator({
+            'username': 'invalid',
+            'password': 'validpwd'
+        })
+        self.assertFalse(invalid_user.is_valid())
+
+
+class ValidatorsTest(unittest.TestCase):
 
     def test_string_validator(self):
 

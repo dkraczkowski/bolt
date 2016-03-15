@@ -57,6 +57,10 @@ class Validator(metaclass=ValidatorMeta):
 
     def is_valid(self):
         validators = self.__class__.__dict__['_validators']
+        for key in validators:
+            if not validators[key].validate(getattr(self, key)):
+                return False
+        return True
 
 
 class ValidationRule:
@@ -67,8 +71,14 @@ class ValidationRule:
     def validate(self, value=None):
         raise RuntimeError(self.__class__.__name__ + '.validate is not defined')
 
-    def _log_error(self, error: str):
-        self._errors.append(error)
+    def required(self, is_required=True):
+        self._required = is_required
+
+    def _validate_required(self, value):
+        if value is None:
+            if self._required:
+                return False
+            return True
 
 
 class RangeAwareValidator:
@@ -100,12 +110,9 @@ class StringValidator(ValidationRule, RangeAwareValidator):
         RangeAwareValidator.__init__(self, min, max)
 
     def validate(self, value=None):
-
-        if value is None:
-            if self._required:
-                self._log_error('%s is required')
-                return False
-            return True
+        is_valid = self._validate_required(value)
+        if is_valid is not None:
+            return is_valid
 
         if not isinstance(value, str):
             return False
@@ -124,11 +131,9 @@ class NumberValidator(ValidationRule, RangeAwareValidator):
         self._allow_decimals = allow_decimals
 
     def validate(self, value=None):
-
-        if value is None:
-            if self._required:
-                return False
-            return True
+        is_valid = self._validate_required(value)
+        if is_valid is not None:
+            return is_valid
 
         if not isinstance(value, int) and not isinstance(value, float):
             return False
@@ -152,10 +157,9 @@ class EmailValidator(ValidationRule):
         self._allowed_domains = allowed_domains
 
     def validate(self, value=None):
-        if value is None:
-            if self._required:
-                return False
-            return True
+        is_valid = self._validate_required(value)
+        if is_valid is not None:
+            return is_valid
 
         matches = re.match(EmailValidator.EMAIL_REGEX, value)
         if matches is None:
@@ -186,10 +190,9 @@ class DateValidator(ValidationRule, RangeAwareValidator):
             return
 
     def validate(self, value=None):
-        if value is None:
-            if self._required:
-                return False
-            return True
+        is_valid = self._validate_required(value)
+        if is_valid is not None:
+            return is_valid
 
         if self._format is None:
             try:
@@ -219,10 +222,9 @@ class BoolValidator(ValidationRule):
         ValidationRule.__init__(self, required)
 
     def validate(self, value=None):
-        if value is None:
-            if self._required:
-                return False
-            return True
+        is_valid = self._validate_required(value)
+        if is_valid is not None:
+            return is_valid
 
         if value not in BoolValidator.BOOL_TRUE and value not in BoolValidator.BOOL_FALSE:
             return False
@@ -233,10 +235,9 @@ class BoolValidator(ValidationRule):
 class TrueValidator(BoolValidator):
 
     def validate(self, value=None):
-        if value is None:
-            if self._required:
-                return False
-            return True
+        is_valid = self._validate_required(value)
+        if is_valid is not None:
+            return is_valid
 
         if value not in BoolValidator.BOOL_TRUE:
             return False
@@ -247,10 +248,9 @@ class TrueValidator(BoolValidator):
 class FalseValidator(BoolValidator):
 
     def validate(self, value=None):
-        if value is None:
-            if self._required:
-                return False
-            return True
+        is_valid = self._validate_required(value)
+        if is_valid is not None:
+            return is_valid
 
         if value not in BoolValidator.BOOL_FALSE:
             return False
@@ -268,10 +268,9 @@ class UrlValidator(ValidationRule):
         self._valid_hosts = valid_hosts
 
     def validate(self, value=None):
-        if value is None:
-            if self._required:
-                return False
-            return True
+        is_valid = self._validate_required(value)
+        if is_valid is not None:
+            return is_valid
 
         matches = re.match(UrlValidator.URL_REGEX, value)
         if matches is None:
@@ -296,8 +295,9 @@ class RegexValidator(ValidationRule):
         self._regex = regex
 
     def validate(self, value=None):
-        if not self._required and value is None:
-            return True
+        is_valid = self._validate_required(value)
+        if is_valid is not None:
+            return is_valid
 
         matches = re.match(self._regex, value)
         if matches is None:
@@ -309,12 +309,15 @@ class RegexValidator(ValidationRule):
 class GroupValidator(ValidationRule):
 
     def __init__(self, **kwargs):
-        self._group = kwargs
+        self._rules = kwargs
 
     def validate(self, value=None):
+        is_valid = self._validate_required(value)
+        if is_valid is not None:
+            return is_valid
 
-        for field in self._group:
-            validator = self._group[field]
+        for field in self._rules:
+            validator = self._rules[field]
             if field not in value:
                 is_valid = validator.validate(None)
             else:
