@@ -1,5 +1,5 @@
 import re
-
+from datetime import datetime
 
 class ValidatorMeta(type):
 
@@ -153,3 +153,37 @@ class EmailValidator(ValidationRule):
             return False
 
         return True
+
+
+class DateValidator(ValidationRule):
+
+    DATE_FORMAT = {
+        'YYYY': '%Y',
+        'yyyy': '%Y',
+        'YY': '%y',
+        'yy': '%y',
+        'MM': '%m',
+        'mm': '%m',
+        'MMM': '',
+        'dd': '%d',
+        'DD': '%d',
+        'ddd': '%s',
+        'dddd': '%A',
+        'HH': '%H',
+        'hh': '%H',
+        'H': '%I',
+        'h': '%I',
+        'SS': '%s',
+        'ss': '%s',
+        '': '%I',
+
+
+    }
+
+    def __init__(self, required=False, date_format=None, min=None, max=None):
+        ValidationRule.__init__(self, required)
+        RangeAwareValidator.__init__(self, min, max)
+        self._format = date_format
+
+    def validate(self, value=None):
+        pass

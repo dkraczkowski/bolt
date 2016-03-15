@@ -1,6 +1,6 @@
 import unittest
 from tests.fixtures import ExampleValidator
-from bolt.validation import StringValidator, NumberValidator, EmailValidator
+from bolt.validation import StringValidator, NumberValidator, EmailValidator, DateValidator
 
 
 class ValidateTest(unittest.TestCase):
@@ -131,3 +131,7 @@ class ValidateTest(unittest.TestCase):
         self.assertFalse(validator.validate('example@example1.com'))
         self.assertFalse(validator.validate('example@a.com'))
         self.assertFalse(validator.validate('example@[123.123.123.123]'))
+
+    def test_date_validator(self):
+
+        validator = DateValidator()
