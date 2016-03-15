@@ -1,5 +1,6 @@
 from bolt.application import Bolt, ServiceLocator
 from bolt.routing import Route
+from bolt.validation import Validator, StringValidator, EmailValidator
 
 app = Bolt()
 
@@ -64,3 +65,9 @@ class SimpleTestObject:
         self.a = a
         self.b = b
         self.c = c
+
+
+class ExampleValidator(Validator):
+
+    username = StringValidator()
+    password = StringValidator()

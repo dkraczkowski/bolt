@@ -23,6 +23,7 @@ class ApplicationFoundation:
         self.service_locator = ServiceLocator()
         self._base_routes = {}
         self._routes = []
+        self._services = {}
         pass
 
     def before(self):
@@ -54,7 +55,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def get(self, rule: str):
+    def get(self, rule: str, **kwargs):
         """ Connects an URI rule to GET request.
         :param rule: uri rule
         """
@@ -65,7 +66,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def post(self, rule: str):
+    def post(self, rule: str, **kwargs):
         def decorator(func):
             self.expose(rule, func, ['POST'])
 
@@ -73,7 +74,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def put(self, rule: str):
+    def put(self, rule: str, **kwargs):
         def decorator(func):
             self.expose(rule, func, ['PUT'])
 
@@ -81,7 +82,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def patch(self, rule: str):
+    def patch(self, rule: str, **kwargs):
         def decorator(func):
             self.expose(rule, func, ['PATCH'])
 
@@ -89,7 +90,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def delete(self, rule: str):
+    def delete(self, rule: str, **kwargs):
         def decorator(func):
             self.expose(rule, func, ['DELETE'])
 
@@ -97,7 +98,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def options(self, rule: str):
+    def options(self, rule: str, **kwargs):
         def decorator(func):
             self.expose(rule, func, ['OPTIONS'])
 
@@ -105,7 +106,7 @@ class ApplicationFoundation:
 
         return decorator
 
-    def any(self, rule: str):
+    def any(self, rule: str, **kwargs):
         def decorator(func):
             self.expose(rule, func)
 
@@ -122,6 +123,7 @@ class ApplicationFoundation:
             'func': func,
             'method': method
         })
+
 
     def service(self, name: str=None):
         def decorator(service):
