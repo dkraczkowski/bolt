@@ -1,9 +1,10 @@
 import unittest
 from tests.fixtures import ExampleValidator
-from bolt.validation import StringValidator, NumberValidator, EmailValidator, DateValidator
+from bolt.validation import *
+from datetime import datetime
 
 
-class ValidateTest(unittest.TestCase):
+class ValidatorsTest(unittest.TestCase):
 
     def test_create_validator(self):
         validator = ExampleValidator({
@@ -134,4 +135,99 @@ class ValidateTest(unittest.TestCase):
 
     def test_date_validator(self):
 
+        date_format = '%Y/%m/%d'
         validator = DateValidator()
+        self.assertTrue(validator.validate('2015-02-01'))
+        validator = DateValidator(date_format=date_format)
+        self.assertTrue(validator.validate('2015/02/01'))
+        self.assertFalse(validator.validate('15/02/01'))
+        min = datetime.strptime('2015/02/01', date_format)
+        max = datetime.strptime('2015/03/01', date_format)
+        validator = DateValidator(min=min, max=max)
+        self.assertTrue(validator.validate('2015/02/01'))
+        self.assertTrue(validator.validate('2015/03/01'))
+        self.assertTrue(validator.validate('2015/02/20'))
+        self.assertFalse(validator.validate('2015/03/02'))
+        self.assertFalse(validator.validate('2015/01/01'))
+
+    def test_url_validator(self):
+
+        validator = UrlValidator()
+        self.assertTrue(validator.validate('example.com'))
+        self.assertTrue(validator.validate('http://example.com'))
+        self.assertTrue(validator.validate('https://example.com'))
+        self.assertTrue(validator.validate('example.com?q=532876%^673'))
+        self.assertTrue(validator.validate(None))
+
+        validator = UrlValidator(valid_schemes=('http', 'https'))
+        self.assertFalse(validator.validate('example.com'))
+        self.assertTrue(validator.validate('http://example.com'))
+        self.assertTrue(validator.validate('http://example.com?sad=123%%%45652#234'))
+        self.assertFalse(validator.validate('chrome://settings.com'))
+
+        validator = UrlValidator(valid_hosts=('example.com', 'test.me'))
+        self.assertTrue(validator.validate('example.com'))
+        self.assertTrue(validator.validate('example.com/some/url'))
+        self.assertTrue(validator.validate('http://test.me/some/url'))
+        self.assertFalse(validator.validate('http://goo.gl/some/url'))
+
+    def test_group_validator(self):
+        user_details = GroupValidator(
+            username=EmailValidator(),
+            password=StringValidator(min=3, max=10),
+            portfolio=UrlValidator()
+        )
+
+        self.assertTrue(user_details.validate({
+            'username': "test@example.com",
+            'password': "test123",
+            'portfolio': "http://portoflio.my/user_id"
+        }))
+
+        self.assertTrue(user_details.validate({
+            'username': "test@example.com",
+            'password': "test123",
+            'portfolio': None
+        }))
+
+        self.assertTrue(user_details.validate({
+            'username': None,
+            'password': None,
+            'portfolio': None
+        }))
+
+        user_details = GroupValidator(
+            username=EmailValidator(required=True),
+            password=StringValidator(required=True, min=3, max=10),
+            portfolio=UrlValidator()
+        )
+
+        self.assertFalse(user_details.validate({
+            'username': None,
+            'password': None,
+            'portfolio': None
+        }))
+
+        self.assertFalse(user_details.validate({
+            'username': 'test',
+            'password': 'test123',
+            'portfolio': None
+        }))
+
+        self.assertTrue(user_details.validate({
+            'username': 'test@example.com',
+            'password': 'test123',
+            'portfolio': None
+        }))
+
+        self.assertFalse(user_details.validate({
+            'username': 'test@example.com',
+            'password': 'test123',
+            'portfolio': 'invalid-url'
+        }))
+
+        self.assertTrue(user_details.validate({
+            'username': 'test@example.com',
+            'password': 'test123',
+            'portfolio': 'http://valid.com/url'
+        }))

@@ -1,5 +1,7 @@
 import re
-from datetime import datetime
+from datetime import datetime, date
+from dateutil import parser as date_parser
+
 
 class ValidatorMeta(type):
 
@@ -60,9 +62,13 @@ class Validator(metaclass=ValidatorMeta):
 class ValidationRule:
     def __init__(self, required=False):
         self._required = required
+        self._errors = []
 
     def validate(self, value=None):
         raise RuntimeError(self.__class__.__name__ + '.validate is not defined')
+
+    def _log_error(self, error: str):
+        self._errors.append(error)
 
 
 class RangeAwareValidator:
@@ -95,7 +101,10 @@ class StringValidator(ValidationRule, RangeAwareValidator):
 
     def validate(self, value=None):
 
-        if not self._required and value is None:
+        if value is None:
+            if self._required:
+                self._log_error('%s is required')
+                return False
             return True
 
         if not isinstance(value, str):
@@ -116,7 +125,9 @@ class NumberValidator(ValidationRule, RangeAwareValidator):
 
     def validate(self, value=None):
 
-        if not self._required and value is None:#@todo: fix me
+        if value is None:
+            if self._required:
+                return False
             return True
 
         if not isinstance(value, int) and not isinstance(value, float):
@@ -141,7 +152,9 @@ class EmailValidator(ValidationRule):
         self._allowed_domains = allowed_domains
 
     def validate(self, value=None):
-        if not self._required and value is None:
+        if value is None:
+            if self._required:
+                return False
             return True
 
         matches = re.match(EmailValidator.EMAIL_REGEX, value)
@@ -155,35 +168,159 @@ class EmailValidator(ValidationRule):
         return True
 
 
-class DateValidator(ValidationRule):
-
-    DATE_FORMAT = {
-        'YYYY': '%Y',
-        'yyyy': '%Y',
-        'YY': '%y',
-        'yy': '%y',
-        'MM': '%m',
-        'mm': '%m',
-        'MMM': '',
-        'dd': '%d',
-        'DD': '%d',
-        'ddd': '%s',
-        'dddd': '%A',
-        'HH': '%H',
-        'hh': '%H',
-        'H': '%I',
-        'h': '%I',
-        'SS': '%s',
-        'ss': '%s',
-        '': '%I',
-
-
-    }
+class DateValidator(ValidationRule, RangeAwareValidator):
 
     def __init__(self, required=False, date_format=None, min=None, max=None):
         ValidationRule.__init__(self, required)
         RangeAwareValidator.__init__(self, min, max)
         self._format = date_format
 
+        if self._min and not isinstance(self._min, date):
+            raise ValueError(self.__class__ + '(min=) min parameter must be instance of datetime.date')
+
+        if self._max and not isinstance(self._max, date):
+            raise ValueError(self.__class__ + '(max=) max parameter must be instance of datetime.date')
+
+        if self._format is None:
+            self._alternative_format = None
+            return
+
     def validate(self, value=None):
-        pass
+        if value is None:
+            if self._required:
+                return False
+            return True
+
+        if self._format is None:
+            try:
+                date = date_parser.parse(value)
+
+            except ValueError:
+                return False
+        else:
+            try:
+                date = datetime.strptime(value, self._format)
+
+            except ValueError:
+                return False
+
+        if not self._validate_range(date):
+            return False
+
+        return True
+
+
+class BoolValidator(ValidationRule):
+
+    BOOL_TRUE = (True, 1, 'yes', 'YES', 'Yes' '1')
+    BOOL_FALSE = (False, 0, 'no', 'NO', 'No', '0')
+
+    def __init__(self, required=False):
+        ValidationRule.__init__(self, required)
+
+    def validate(self, value=None):
+        if value is None:
+            if self._required:
+                return False
+            return True
+
+        if value not in BoolValidator.BOOL_TRUE and value not in BoolValidator.BOOL_FALSE:
+            return False
+
+        return True
+
+
+class TrueValidator(BoolValidator):
+
+    def validate(self, value=None):
+        if value is None:
+            if self._required:
+                return False
+            return True
+
+        if value not in BoolValidator.BOOL_TRUE:
+            return False
+
+        return True
+
+
+class FalseValidator(BoolValidator):
+
+    def validate(self, value=None):
+        if value is None:
+            if self._required:
+                return False
+            return True
+
+        if value not in BoolValidator.BOOL_FALSE:
+            return False
+
+        return True
+
+
+class UrlValidator(ValidationRule):
+
+    URL_REGEX = r"((\w+?)?\:\/\/)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b)([-a-zA-Z0-9@:%_\+.~#?&//=]*)"
+
+    def __init__(self, required=False, valid_schemes=None, valid_hosts=None):
+        ValidationRule.__init__(self, required)
+        self._valid_schemes = valid_schemes
+        self._valid_hosts = valid_hosts
+
+    def validate(self, value=None):
+        if value is None:
+            if self._required:
+                return False
+            return True
+
+        matches = re.match(UrlValidator.URL_REGEX, value)
+        if matches is None:
+            return False
+
+        scheme = matches.group(2)
+        host = matches.group(3)
+
+        if self._valid_schemes is not None and scheme not in self._valid_schemes:
+            return False
+
+        if self._valid_hosts is not None and host not in self._valid_hosts:
+            return False
+
+        return True
+
+
+class RegexValidator(ValidationRule):
+
+    def __init__(self, regex, required=False):
+        ValidationRule.__init__(self, required)
+        self._regex = regex
+
+    def validate(self, value=None):
+        if not self._required and value is None:
+            return True
+
+        matches = re.match(self._regex, value)
+        if matches is None:
+            return False
+
+        return True
+
+
+class GroupValidator(ValidationRule):
+
+    def __init__(self, **kwargs):
+        self._group = kwargs
+
+    def validate(self, value=None):
+
+        for field in self._group:
+            validator = self._group[field]
+            if field not in value:
+                is_valid = validator.validate(None)
+            else:
+                is_valid = validator.validate(value[field])
+
+            if not is_valid:
+                return False
+
+        return True
