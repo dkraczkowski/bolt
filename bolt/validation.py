@@ -1,9 +1,9 @@
 import re
-import json
 from datetime import datetime, date
 from dateutil import parser as date_parser
 from bolt.http import Request, Response, HttpException
 from bolt.routing import Route
+
 
 class ValidatorMeta(type):
 
@@ -63,6 +63,28 @@ class Validator(metaclass=ValidatorMeta):
             if not validators[key].validate(getattr(self, key)):
                 return False
         return True
+
+
+class ValidationResult:
+
+    def __init__(self, valid):
+        self._valid = valid
+        self._errors = []
+
+    def is_valid(self):
+        return self._valid
+
+    def valid(self):
+        self._valid = True
+
+    def invalid(self):
+        self._valid = False
+
+    def add_error(self, msg):
+        self._errors.append(msg)
+
+    def get_errors(self):
+        return self._errors
 
 
 class ValidationRule:
