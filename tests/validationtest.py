@@ -62,10 +62,10 @@ class ValidatorsTest(unittest.TestCase):
         self.assertTrue(validator.validate(None)())
 
         validator = StringValidator(min=2, max=4, required=True)
-        self.assertFalse(validator.validate(None))
-        self.assertTrue(validator.validate('m' * 3))
-        self.assertFalse(validator.validate('m'))
-        self.assertFalse(validator.validate('m' * 5))
+        self.assertFalse(validator.validate(None)())
+        self.assertTrue(validator.validate('m' * 3)())
+        self.assertFalse(validator.validate('m')())
+        self.assertFalse(validator.validate('m' * 5)())
 
     def test_number_validator(self):
 
@@ -75,28 +75,28 @@ class ValidatorsTest(unittest.TestCase):
         self.assertTrue(validator.validate(None))
 
         validator = NumberValidator(min=1)
-        self.assertFalse(validator.validate(0.2))
-        self.assertFalse(validator.validate(0))
-        self.assertFalse(validator.validate(-1))
-        self.assertTrue(validator.validate(1))
-        self.assertTrue(validator.validate(1.0))
+        self.assertFalse(validator.validate(0.2)())
+        self.assertFalse(validator.validate(0)())
+        self.assertFalse(validator.validate(-1)())
+        self.assertTrue(validator.validate(1)())
+        self.assertTrue(validator.validate(1.0)())
 
         validator = NumberValidator(max=2)
-        self.assertTrue(validator.validate(2))
-        self.assertTrue(validator.validate(1.0))
-        self.assertFalse(validator.validate(2.1))
-        self.assertFalse(validator.validate(3))
+        self.assertTrue(validator.validate(2)())
+        self.assertTrue(validator.validate(1.0)())
+        self.assertFalse(validator.validate(2.1)())
+        self.assertFalse(validator.validate(3)())
 
         validator = NumberValidator(min=1, max=2)
-        self.assertTrue(validator.validate(2))
-        self.assertTrue(validator.validate(1.0))
-        self.assertFalse(validator.validate(2.1))
-        self.assertFalse(validator.validate(3))
-        self.assertFalse(validator.validate(0))
+        self.assertTrue(validator.validate(2)())
+        self.assertTrue(validator.validate(1.0)())
+        self.assertFalse(validator.validate(2.1)())
+        self.assertFalse(validator.validate(3)())
+        self.assertFalse(validator.validate(0)())
 
         validator = NumberValidator(allow_decimals=False)
-        self.assertTrue(validator.validate(2))
-        self.assertFalse(validator.validate(1.0))
+        self.assertTrue(validator.validate(2)())
+        self.assertFalse(validator.validate(1.0)())
 
     def test_email_validator(self):
 
@@ -137,55 +137,55 @@ class ValidatorsTest(unittest.TestCase):
         validator = EmailValidator()
 
         for email in valid_emails:
-            self.assertTrue(validator.validate(email))
+            self.assertTrue(validator.validate(email)())
 
         for email in invalid_emails:
-            self.assertFalse(validator.validate(email))
+            self.assertFalse(validator.validate(email)())
 
         validator = EmailValidator(allowed_domains=['example.com', 'super.gmail.com'])
-        self.assertTrue(validator.validate('example@super.gmail.com'))
-        self.assertTrue(validator.validate('example@example.com'))
-        self.assertFalse(validator.validate('example@example1.com'))
-        self.assertFalse(validator.validate('example@a.com'))
-        self.assertFalse(validator.validate('example@[123.123.123.123]'))
+        self.assertTrue(validator.validate('example@super.gmail.com')())
+        self.assertTrue(validator.validate('example@example.com')())
+        self.assertFalse(validator.validate('example@example1.com')())
+        self.assertFalse(validator.validate('example@a.com')())
+        self.assertFalse(validator.validate('example@[123.123.123.123]')())
 
     def test_date_validator(self):
 
         date_format = '%Y/%m/%d'
         validator = DateValidator()
-        self.assertTrue(validator.validate('2015-02-01'))
+        self.assertTrue(validator.validate('2015-02-01')())
         validator = DateValidator(date_format=date_format)
-        self.assertTrue(validator.validate('2015/02/01'))
-        self.assertFalse(validator.validate('15/02/01'))
+        self.assertTrue(validator.validate('2015/02/01')())
+        self.assertFalse(validator.validate('15/02/01')())
         min = datetime.strptime('2015/02/01', date_format)
         max = datetime.strptime('2015/03/01', date_format)
         validator = DateValidator(min=min, max=max)
-        self.assertTrue(validator.validate('2015/02/01'))
-        self.assertTrue(validator.validate('2015/03/01'))
-        self.assertTrue(validator.validate('2015/02/20'))
-        self.assertFalse(validator.validate('2015/03/02'))
-        self.assertFalse(validator.validate('2015/01/01'))
+        self.assertTrue(validator.validate('2015/02/01')())
+        self.assertTrue(validator.validate('2015/03/01')())
+        self.assertTrue(validator.validate('2015/02/20')())
+        self.assertFalse(validator.validate('2015/03/02')())
+        self.assertFalse(validator.validate('2015/01/01')())
 
     def test_url_validator(self):
 
         validator = UrlValidator()
-        self.assertTrue(validator.validate('example.com'))
-        self.assertTrue(validator.validate('http://example.com'))
-        self.assertTrue(validator.validate('https://example.com'))
-        self.assertTrue(validator.validate('example.com?q=532876%^673'))
-        self.assertTrue(validator.validate(None))
+        self.assertTrue(validator.validate('example.com')())
+        self.assertTrue(validator.validate('http://example.com')())
+        self.assertTrue(validator.validate('https://example.com')())
+        self.assertTrue(validator.validate('example.com?q=532876%^673')())
+        self.assertTrue(validator.validate(None)())
 
         validator = UrlValidator(valid_schemes=('http', 'https'))
-        self.assertFalse(validator.validate('example.com'))
-        self.assertTrue(validator.validate('http://example.com'))
-        self.assertTrue(validator.validate('http://example.com?sad=123%%%45652#234'))
-        self.assertFalse(validator.validate('chrome://settings.com'))
+        self.assertFalse(validator.validate('example.com')())
+        self.assertTrue(validator.validate('http://example.com')())
+        self.assertTrue(validator.validate('http://example.com?sad=123%%%45652#234')())
+        self.assertFalse(validator.validate('chrome://settings.com')())
 
         validator = UrlValidator(valid_hosts=('example.com', 'test.me'))
-        self.assertTrue(validator.validate('example.com'))
-        self.assertTrue(validator.validate('example.com/some/url'))
-        self.assertTrue(validator.validate('http://test.me/some/url'))
-        self.assertFalse(validator.validate('http://goo.gl/some/url'))
+        self.assertTrue(validator.validate('example.com')())
+        self.assertTrue(validator.validate('example.com/some/url')())
+        self.assertTrue(validator.validate('http://test.me/some/url')())
+        self.assertFalse(validator.validate('http://goo.gl/some/url')())
 
     def test_group_validator(self):
         user_details = GroupValidator(
@@ -222,28 +222,28 @@ class ValidatorsTest(unittest.TestCase):
             'username': None,
             'password': None,
             'portfolio': None
-        }))
+        })())
 
         self.assertFalse(user_details.validate({
             'username': 'test',
             'password': 'test123',
             'portfolio': None
-        }))
+        })())
 
         self.assertTrue(user_details.validate({
             'username': 'test@example.com',
             'password': 'test123',
             'portfolio': None
-        }))
+        })())
 
         self.assertFalse(user_details.validate({
             'username': 'test@example.com',
             'password': 'test123',
             'portfolio': 'invalid-url'
-        }))
+        })())
 
         self.assertTrue(user_details.validate({
             'username': 'test@example.com',
             'password': 'test123',
             'portfolio': 'http://valid.com/url'
-        }))
+        })())
