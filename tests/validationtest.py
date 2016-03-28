@@ -1,6 +1,6 @@
 import unittest
 from tests.fixtures import ExampleValidator
-from bolt.validation import *
+from bolt.validator import *
 from datetime import datetime
 
 

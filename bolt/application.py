@@ -4,12 +4,14 @@ Bolt is a micro rest framework.
 Copyright (c) 2016, Dawid Krac Kraczkowski
 License: MIT (see LICENSE for details)
 """
-from .routing import Route, RouteMap
+from .router import Route, RouteMap
 from .utils import find_class, get_fqn, call_object_method, find_clsname
-from .http import Request, Response, Uri, HttpException
+from .http import Request, Response, HttpException
+from .odm import Serializable
 
 import inspect
 import copy
+import json
 
 
 class ApplicationFoundation:
@@ -421,5 +423,13 @@ class MiddlewareComposer:
             callback(*func_args, **kw_func_args)
 
         return True
+
+
+class Controller:
+    def send(self, obj, serializer='json', status=200):
+        if not isinstance(obj, Serializable):
+            raise ValueError('Passed object is not serializable')
+        dict = obj.serialize()
+        return Response(json.dumps(dict), status, {'Content-Type': 'text/json'})
 
 bolt = Bolt()

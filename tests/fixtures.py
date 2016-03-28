@@ -1,6 +1,8 @@
 from bolt.application import Bolt, ServiceLocator
-from bolt.routing import Route
-from bolt.validation import Validator, StringValidator, EmailValidator
+from bolt.router import Route
+from bolt.validator import Validator, StringValidator, EmailValidator
+from bolt.odm import Field, Entity, Map
+from datetime import datetime
 
 app = Bolt()
 
@@ -69,5 +71,41 @@ class SimpleTestObject:
 
 class ExampleValidator(Validator):
 
-    username = StringValidator()
-    password = StringValidator()
+    username = EmailValidator()
+    password = StringValidator(min=3)
+
+
+class UserEntity(Entity):
+    name = Field(type=str)
+    number = Field(type=int, default=0)
+    height = Field(type=float)
+
+
+class TeamEntity(Entity):
+    name = Field(type=str, default='default')
+    stars = Field(type=int)
+    created_at = Field(type=datetime)
+    creator = Field(type=UserEntity)
+    scores = Field(type=list)
+    members = Field(type=UserEntity)
+
+
+class EntityA(Entity):
+    value = Field(type=str)
+
+
+class EntityB(Entity):
+    value = Field(type=str)
+
+
+class EntityC(Entity):
+    value = Field(type=str)
+
+
+class GroupEntity(Entity):
+    group = Map(map={
+        'a': EntityA,
+        'b': EntityB,
+        'c': EntityC
+    }, discriminator='type')
+

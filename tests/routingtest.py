@@ -1,5 +1,5 @@
 import unittest
-from bolt.routing import Rule, Route, RouteMap
+from bolt.router import Rule, Route, RouteMap
 import inspect
 
 

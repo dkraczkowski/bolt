@@ -2,7 +2,7 @@ import re
 from datetime import datetime, date
 from dateutil import parser as date_parser
 from bolt.http import Request, Response, HttpException
-from bolt.routing import Route
+from bolt.router import Route
 
 
 class ValidatorMeta(type):
