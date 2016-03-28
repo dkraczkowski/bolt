@@ -81,6 +81,10 @@ class UserEntity(Entity):
     height = Field(type=float)
 
 
+class CitizenEntity(UserEntity):
+    city = Field(type=str)
+
+
 class TeamEntity(Entity):
     name = Field(type=str, default='default')
     stars = Field(type=int)

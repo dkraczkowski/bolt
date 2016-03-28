@@ -1,4 +1,4 @@
-from tests.fixtures import UserEntity, TeamEntity, GroupEntity, EntityA, EntityB, EntityC
+from tests.fixtures import UserEntity, CitizenEntity, TeamEntity, GroupEntity, EntityA, EntityB, EntityC
 from bolt.odm import Entity, Field, Mapper
 import unittest
 
@@ -134,3 +134,6 @@ class MapperTest(unittest.TestCase):
         self.assertIsInstance(groups[1].group, EntityB)
         self.assertIsInstance(groups[2].group, EntityC)
 
+    def test_entity_with_inheritance(self):
+
+        entity = CitizenEntity(name='Bob', city='California')

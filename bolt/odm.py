@@ -71,23 +71,26 @@ class EntityMeta(type):
             klass = type.__new__(mcs, name, bases, attrs)
             return klass
 
+        inherited_properties = {}
         properties = {}
         for value in bases:
-            if issubclass(value, Entity):
-                EntityMeta._extract_properties(value.__dict__, properties)
+            if issubclass(value, Entity) and value is not Entity:
+                inherited_properties.update(value.__properties__)
 
-        delete_props = []
-        for name in attrs:
-            field = attrs[name]
-            if isinstance(value, Field):
-                properties[name] = field
-                delete_props.append(name)
+        EntityMeta._extract_properties(attrs, properties)
 
         # Delete definitions from entity
-        for name in delete_props:
+        for name in properties:
             del attrs[name]
 
-        attrs['__properties__'] = properties
+        # Find Id
+        id = None
+        for name in properties:
+            property = properties[name]
+            if isinstance(property, Id):
+                attrs['__id__'] = property
+
+        attrs['__properties__'] = dict(list(inherited_properties.items()) + list(properties.items()))
         klass = type.__new__(mcs, name, bases, attrs)
         return klass
 
@@ -96,11 +99,13 @@ class EntityMeta(type):
         for name in attrs:
             value = attrs[name]
             if isinstance(value, Field):
+                value.name = name
                 properties[name] = value
 
 
 class Entity(metaclass=EntityMeta):
     def __init__(self, **kwargs):
+        self.__persisted__ = False
         for name in self.__properties__:
             prop = self.__properties__[name]
             if name in kwargs:
@@ -108,9 +113,13 @@ class Entity(metaclass=EntityMeta):
             else:
                 setattr(self, name, copy.deepcopy(prop.default))
 
+    def get_id(self):
+        if not hasattr(self, '__id__'):
+            return None
+        return getattr(self, self.__id__.name)
+
 
 class Serializable:
-
     def serialize(self):
         return {}
 
@@ -210,7 +219,9 @@ class Cursor(pymongo.cursor.Cursor):
             cls = ODM.__using__[self.__collection.name]
             map = Mapper(cls)
             entity = map.to_entity(data)
-            entity.__id__ = data['_id']
+            entity.__persisted__ = True
+            if hasattr(entity, '__id__'):
+                setattr(entity, entity.__id__.name, data['_id'])
             return entity
 
         return data
@@ -223,9 +234,20 @@ class Query(pymongo.collection.Collection):
     def find(self, *args, **kwargs):
         return Cursor(self, *args, **kwargs)
 
-    def save(self, entity: Entity):
+    def persist(self, entity: Entity):
+        if not isinstance(entity, Entity):
+            raise ValueError('Can persist only entities')
+        if not hasattr(entity, '__collection__'):
+            raise ValueError('Entity is not assigned to any collection, please refer ODM.use() for further information')
+        if entity.__collection__ != self.name:
+            raise ValueError('Passed entity have to be persisted in %s collection' % entity.__collection__)
 
-        pass
+        cls = ODM.__using__[self.name]
+        data = Mapper(cls).from_entity(entity)
+        if entity.__persisted__ is False:
+            self.insert_one(data)
+        else:
+            self.replace_one({'_id': entity.get_id()}, data)
 
 
 class ODM:
