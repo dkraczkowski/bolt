@@ -140,6 +140,10 @@ class ApplicationFoundation:
                 if self._base_routes[clsname] is not '/':
                     rule = self._base_routes[clsname] + rule
 
+            # Skip last /
+            if rule[-1] == '/' and len(rule) > 1:
+                rule = rule[:-1]
+
             self._map.add(Route(rule, func, route['settings']), route['method'])
 
 
@@ -428,6 +432,8 @@ class MiddlewareComposer:
 class Controller:
     def send(self, obj, serializer='json', status=200):
         if not isinstance(obj, Serializable):
+            if isinstance(obj, str):
+               return Response(obj, status, {'Content-Type': 'text/plain'})
             raise ValueError('Passed object is not serializable')
         dict = obj.serialize()
         return Response(json.dumps(dict), status, {'Content-Type': 'text/json'})

@@ -112,6 +112,9 @@ class Entity(metaclass=EntityMeta):
                 setattr(self, name, kwargs[name])
             else:
                 setattr(self, name, copy.deepcopy(prop.default))
+        if hasattr(self, '__id__') and getattr(self, self.__id__.name) is None:
+            setattr(self, self.__id__.name, ObjectId())
+
 
     def get_id(self):
         if not hasattr(self, '__id__'):
@@ -150,14 +153,14 @@ class Mapper:
                 result[key] = prop.default
                 continue
             value = getattr(entity, key)
-            if issubclass(prop.type, Entity):
+            if issubclass(prop.get_type(), Entity):
                 if isinstance(value, (list, tuple)):
                     collection = []
                     for item in value:
-                        collection.append(Mapper(prop.type).serialize(item))
+                        collection.append(Mapper(prop.get_type()).serialize(item))
                     result[key] = collection
                 else:
-                    result[key] = Mapper(prop.type).serialize(value)
+                    result[key] = Mapper(prop.get_type()).serialize(value)
             else:
                 result[key] = value
 

@@ -209,7 +209,7 @@ class ParsedRule:
         for property in self._properties:
             pattern = pattern.replace(property.raw, '\/(?P<' + property.name + '>' + property.regex + ')')
 
-        return pattern
+        return '^' + pattern + '$'
 
     class RuleProperty:
 

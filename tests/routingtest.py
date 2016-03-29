@@ -14,6 +14,9 @@ class RoutingTest(unittest.TestCase):
         result = rule.match('/')
         self.assertNotEqual(None, result)
 
+        result = rule.match('/incorrect')
+        self.assertEqual(None, result)
+
         rule = Rule('/simple/test')
         result = rule.match('/simple/test')
         self.assertNotEqual(None, result)

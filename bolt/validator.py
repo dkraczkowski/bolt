@@ -415,3 +415,5 @@ class ValidationService:
 
             if not validator.is_valid():
                 raise HttpException('Could not validate request', Response.HTTP_UNPROCESSABLE_ENTITY)
+
+            service_locator.set(validator, validator.__class__)
