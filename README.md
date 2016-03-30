@@ -1,2 +1,2 @@
 # bolt
-Microframework written in python for rest services
+REST Microframework
